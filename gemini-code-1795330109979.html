@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#B76E79" />
+  <title>Salon Mufida — POS Kasir</title>
+
+  <!-- Manifest PWA -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheet Terpisah -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- html2pdf.js untuk Download Struk PDF Thermal -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+
+  <!-- HEADER ATAS -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-logo">SM</div>
+        <div class="brand-title-wrap">
+          <h1 class="brand-title">Salon Mufida</h1>
+          <span id="statusDot" class="status-dot" title="Status Koneksi"></span>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="themeToggle" class="btn-icon" type="button" aria-label="Ubah Tema">
+          <span id="themeIcon">🌙</span>
+          <span id="themeLabel">Mode Gelap</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- BAR NAVIGASI TAB -->
+  <nav class="nav-bar">
+    <div class="nav-inner">
+      <div class="nav-tabs">
+        <button class="tab-btn active" data-tab="kasir">Kasir</button>
+        <button class="tab-btn" data-tab="laporan">Laporan &amp; Buku Kas</button>
+        <button class="tab-btn" data-tab="pengeluaran">Catat Pengeluaran</button>
+      </div>
+      <button class="btn-check-order" data-tab="cek-order">Cek ID Order</button>
+    </div>
+  </nav>
+
+  <!-- KONTEN UTAMA -->
+  <main class="container">
+
+    <!-- VIEW 1: KASIR -->
+    <section id="view-kasir" class="view-section active">
+      <div class="kasir-grid">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Katalog Layanan</h2>
+            <span id="serviceCount" class="service-count"></span>
+          </div>
+
+          <form id="addServiceForm" class="add-service-bar">
+            <input type="text" id="newServiceName" class="input-field" placeholder="Nama layanan" maxlength="60" required />
+            <input type="number" id="newServicePrice" class="input-field" placeholder="Harga (Rp)" min="500" max="100000000" step="500" inputmode="numeric" required />
+            <button type="submit" class="btn-primary">+ Tambah</button>
+          </form>
+
+          <div id="catalogGrid" class="catalog-grid"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Pesanan Aktif</h2>
+            <button id="clearCartBtn" type="button" class="btn-del-service clear-cart-btn">Kosongkan</button>
+          </div>
+
+          <div id="cartList" class="cart-list">
+            <div class="cart-empty">Pilih layanan di sebelah kiri untuk memulai pesanan.</div>
+          </div>
+
+          <div class="customer-note-wrap">
+            <input type="text" id="customerName" class="input-field" placeholder="Nama pelanggan / catatan (opsional)" maxlength="60" />
+          </div>
+
+          <div class="checkout-summary">
+            <div class="total-row">
+              <span class="total-label">Total Bayar</span>
+              <span id="cartTotal" class="total-amount">Rp 0</span>
+            </div>
+            <button id="payBtn" type="button" class="btn-pay-hero" disabled>Bayar &amp; Cetak Struk</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: LAPORAN & BUKU KAS -->
+    <section id="view-laporan" class="view-section">
+      <div class="filter-pills">
+        <button class="pill-btn active" data-period="today">Hari Ini</button>
+        <button class="pill-btn" data-period="week">7 Hari Terakhir</button>
+        <button class="pill-btn" data-period="month">Bulan Ini</button>
+        <button class="pill-btn" data-period="all">Semua Waktu</button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Pemasukan</div>
+          <div id="statIncome" class="stat-value income">Rp 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pengeluaran</div>
+          <div id="statExpense" class="stat-value expense">Rp 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Saldo Bersih</div>
+          <div id="statBalance" class="stat-value">Rp 0</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Riwayat Arus Kas</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>ID / Keterangan</th>
+                <th>Jenis</th>
+                <th>Nominal</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="cashflowTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Panel Cadangkan & Pulihkan Data -->
+      <div class="card backup-card">
+        <div class="backup-info">
+          <h2 class="card-title">Cadangkan &amp; Pulihkan Data</h2>
+          <p class="backup-desc">Unduh seluruh riwayat transaksi, pengeluaran, dan katalog layanan dalam satu file cadangan (.json). Saat memulihkan, kamu bisa menggabungkan banyak file tanpa menimpa data yang sudah ada.</p>
+          <div id="backupSummary" class="backup-meta"></div>
+        </div>
+        <div class="backup-actions">
+          <button id="exportBackupBtn" type="button" class="btn-primary">Unduh Cadangan (.json)</button>
+          <button id="mergeBackupBtn" type="button" class="btn-secondary">Gabung dari File</button>
+          <button id="importBackupBtn" type="button" class="btn-secondary">Timpa Penuh</button>
+          <input type="file" id="restoreFileInput" accept=".json,application/json" multiple style="display: none;" />
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: CATAT PENGELUARAN -->
+    <section id="view-pengeluaran" class="view-section">
+      <div class="expense-layout">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Input Pengeluaran Operasional</h2>
+          </div>
+          <form id="expenseForm">
+            <div class="form-group">
+              <label class="form-label" for="expenseDesc">Keperluan</label>
+              <input type="text" id="expenseDesc" class="input-field" placeholder="Contoh: Beli shampo & vitamin" maxlength="120" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="expenseAmount">Nominal (Rp)</label>
+              <input type="number" id="expenseAmount" class="input-field" placeholder="Nominal rupiah" min="1" max="1000000000" step="1" inputmode="numeric" required />
+            </div>
+            <button type="submit" class="btn-primary btn-full">Simpan Pengeluaran</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Daftar Pengeluaran Terakhir</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Keperluan</th>
+                  <th>Nominal</th>
+                </tr>
+              </thead>
+              <tbody id="expenseOnlyBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: CEK ID ORDER -->
+    <section id="view-cek-order" class="view-section">
+      <div class="card lookup-box">
+        <div class="card-header">
+          <h2 class="card-title">Verifikasi &amp; Cek ID Order</h2>
+        </div>
+        <form id="lookupForm" class="lookup-form">
+          <input type="text" id="lookupInput" class="input-field" placeholder="Masukkan ID (misal: MFD-261121-6619)" maxlength="30" required />
+          <button type="submit" class="btn-primary">Cari</button>
+        </form>
+        <div id="lookupResult"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL POP-UP PRATINJAU STRUK THERMAL -->
+  <div id="receiptModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Struk Transaksi</h3>
+        <div class="paper-size-switch" aria-label="Ukuran Kertas Thermal">
+          <button type="button" class="paper-btn active" data-paper="80mm">80mm</button>
+          <button type="button" class="paper-btn" data-paper="58mm">58mm</button>
+          <button id="closeModalBtn" type="button" class="btn-close" aria-label="Tutup">&times;</button>
+        </div>
+      </div>
+
+      <div id="thermalReceiptArea" class="thermal-paper paper-80mm">
+        <div class="thermal-center">
+          <div class="thermal-store">SALON MUFIDA</div>
+          <div>Struk Layanan Resmi</div>
+        </div>
+        <div class="thermal-divider"></div>
+        <div class="thermal-row">
+          <span>ID Order</span>
+          <strong id="rcpId">-</strong>
+        </div>
+        <div class="thermal-row">
+          <span>Tanggal</span>
+          <span id="rcpDate">-</span>
+        </div>
+        <div id="rcpCustomerRow" class="thermal-row" style="display: none;">
+          <span>Pelanggan</span>
+          <span id="rcpCustomer">-</span>
+        </div>
+        <div class="thermal-divider"></div>
+        <div id="rcpItems"></div>
+        <div class="thermal-divider"></div>
+        <div class="thermal-row thermal-total">
+          <span>TOTAL BAYAR</span>
+          <span id="rcpTotal">Rp 0</span>
+        </div>
+        <div class="thermal-divider"></div>
+        <div class="thermal-center thermal-thanks">
+          Terima kasih atas kunjungan Anda!
+        </div>
+      </div>
+
+      <div class="modal-actions-3">
+        <button id="printReceiptBtn" type="button" class="btn-primary">Cetak Struk</button>
+        <button id="downloadPdfBtn" type="button" class="btn-secondary">Download PDF</button>
+        <button id="doneModalBtn" type="button" class="btn-secondary">Selesai</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- Script Utama Terpisah -->
+  <script src="app.js"></script>
+</body>
+</html>
